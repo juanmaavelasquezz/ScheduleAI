@@ -20,3 +20,6 @@ La extracción usa gpt-4o-mini. No se cambió ni descargó la clave de Render. L
 
 ## Verificación
 `npm test` y `npm run build`. La integración real con OpenAI necesita la clave del entorno y un documento representativo; las pruebas locales no consumen créditos.
+
+## Importación PACR42 (CORHUILA)
+Lectura local por columnas y continuidad de páginas, sin OpenAI. Conserva los intervalos de vigencia separados y los aplica en calendario, horario y consultas. Otras estructuras usan la extracción con IA y requieren revisión. El PDF privado no se guarda en el repositorio. Prueba opcional: `SCHEDULE_TEST_PDF=/ruta/horario.pdf npm test`.

@@ -1,3 +1,8 @@
+export function classOccursOn(entry,date){
+ const day=(new Date(date+'T12:00:00Z').getUTCDay()+6)%7;
+ return entry.dayIndex===day && (!entry.dateRanges?.length || entry.dateRanges.some(r=>date>=r.startDate&&date<=r.endDate));
+}
+export const rangeLabel=entry=>entry.dateRanges?.length?entry.dateRanges.map(r=>`${r.startDate} → ${r.endDate}`).join(' · '):'Repite semanalmente';
 export const todayCO = () => new Intl.DateTimeFormat('en-CA',{timeZone:'America/Bogota',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export const addDays = (date,n) => {const d=new Date(date+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10)};
 export function holidays(year){
@@ -22,7 +27,7 @@ export function agendaReply(message,schedule,tasks,today=todayCO()){
  else {const days=['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];const target=days.findIndex(x=>q.includes(x));if(target>=0)start=end=addDays(today,(target-dow+7)%7);else if(!/hoy|tareas|pendientes|horario|agenda/.test(q))return null;}
  const rows=[];for(let date=start;date<=end;date=addDays(date,1)){
  const idx=(new Date(date+'T12:00:00Z').getUTCDay()+6)%7,holiday=holidayOn(date);
- const cls=schedule.filter(x=>x.dayIndex===idx).sort((a,b)=>a.startTime.localeCompare(b.startTime));
+ const cls=schedule.filter(x=>classOccursOn(x,date)).sort((a,b)=>a.startTime.localeCompare(b.startTime));
  const ts=tasks.filter(t=>!t.completed).flatMap(t=>[{...t},...(t.pendingDates||[]).map(p=>({...t,...p}))]).filter(t=>t.dueDate===date);
  rows.push(`${date}${holiday?' · Festivo: '+holiday:''}\n${cls.map(x=>`• ${x.startTime}–${x.endTime} ${x.subject}${holiday?' (confirma si hay clase)':''}`).concat(ts.map(t=>`• Entrega: ${t.title}${t.dueTime?' · '+t.dueTime:''}`)).join('\n')||'Sin clases ni tareas registradas.'}`);
  }return rows.join('\n\n');

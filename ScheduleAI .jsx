@@ -1,4 +1,4 @@
-import {todayCO, agendaReply, holidayOn, addDays} from './academic.js';
+import {todayCO, agendaReply, holidayOn, addDays, classOccursOn, rangeLabel} from './academic.js';
 import './redesign.css';
 const storage = {get: async key => {const value=localStorage.getItem(key);return value===null?null:{value}},set: async (key,value) => localStorage.setItem(key,value)};
 import { useState, useEffect, useRef } from "react";
@@ -332,7 +332,7 @@ export default function App() {
     setBusy(false);
   }
 
-  const daySched = sched.filter(e=>e.dayIndex===day).sort((a,b)=>a.startTime.localeCompare(b.startTime));
+  const daySched = sched.filter(e=>classOccursOn(e,addDays(todayCO(),day-TODAY_IDX))).sort((a,b)=>a.startTime.localeCompare(b.startTime));
   const tasksSorted = [...tasks].sort((a,b)=>{
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     return new Date(a.dueDate) - new Date(b.dueDate);
@@ -427,8 +427,8 @@ export default function App() {
 
   return (
     <div className="app-shell" style={s.wrap}>
-      {pendingImport && <div className="review" role="dialog" aria-modal="true" aria-label="Revisar importación"><article><h2>Revisa tu nuevo plan</h2><p>Comprueba días y horas antes de guardar. Puedes editar cada elemento después.</p><pre>{(pendingImport.entries||[]).map(e=>`${DAYS[e.dayIndex]} · ${e.startTime}–${e.endTime} · ${e.subject}`).concat((pendingImport.tasks||[]).map(t=>`${t.dueDate} · ${t.title}`)).join('\n')}</pre><button onClick={()=>setPendingImport(null)}>Cancelar</button><button onClick={()=>{
-       const stamp=Date.now();const es=(pendingImport.entries||[]).filter(e=>!sched.some(x=>x.dayIndex===e.dayIndex&&x.startTime===e.startTime&&x.endTime===e.endTime&&x.subject.toLowerCase()===e.subject.toLowerCase()));
+      {pendingImport && <div className="review" role="dialog" aria-modal="true" aria-label="Revisar importación"><article><h2>Revisa tu nuevo plan</h2><p>Comprueba días y horas antes de guardar. Puedes editar cada elemento después.</p><pre>{(pendingImport.entries||[]).map(e=>`${DAYS[e.dayIndex]} · ${e.startTime}–${e.endTime} · ${e.subject}\n${rangeLabel(e)}`).concat((pendingImport.tasks||[]).map(t=>`${t.dueDate} · ${t.title}`)).join('\n')}</pre><button onClick={()=>setPendingImport(null)}>Cancelar</button><button onClick={()=>{
+       const stamp=Date.now();const es=(pendingImport.entries||[]).filter(e=>!sched.some(x=>x.dayIndex===e.dayIndex&&x.startTime===e.startTime&&x.endTime===e.endTime&&x.subject.toLowerCase()===e.subject.toLowerCase()&&JSON.stringify(x.dateRanges||[])===JSON.stringify(e.dateRanges||[])));
        const ts=(pendingImport.tasks||[]).filter(t=>!tasks.some(x=>x.title.toLowerCase()===t.title.toLowerCase()&&x.dueDate===t.dueDate));
        putSched([...sched,...es.map((e,i)=>({...e,id:`ai-e-${stamp}-${i}`}))]);putTasks([...tasks,...ts.map((t,i)=>({...t,id:`ai-t-${stamp}-${i}`,completed:false}))]);setPendingImport(null);
       }}>Guardar en mi agenda</button></article></div>}
@@ -509,7 +509,7 @@ export default function App() {
                        const hasClass = sched.some(e => {
                          const jsDay = new Date(`${dStr}T12:00:00`).getDay();
                          const internalDayIndex = jsDay === 0 ? 6 : jsDay - 1; 
-                         return e.dayIndex === internalDayIndex;
+                         return classOccursOn(e,dStr);
                        });
                        
                        const isSelected = homeSelDate === dStr;
@@ -552,7 +552,7 @@ export default function App() {
                   const selJsDay = new Date(`${homeSelDate}T12:00:00`).getDay();
                   const dIdx = selJsDay === 0 ? 6 : selJsDay - 1;
                   
-                  const dClasses = sched.filter(e => e.dayIndex === dIdx).sort((a,b)=>a.startTime.localeCompare(b.startTime));
+                  const dClasses = sched.filter(e => classOccursOn(e,homeSelDate)).sort((a,b)=>a.startTime.localeCompare(b.startTime));
                   const dTasks = tasks.map(t => {
                     if(!t.completed && t.dueDate === homeSelDate) return {...t, exactTime: t.dueTime};
                     if(!t.completed && t.pendingDates) {
@@ -652,7 +652,7 @@ export default function App() {
                     </div>
                     <div style={s.eb} onClick={() => setExpandedSchedId(isExpanded ? null : e.id)}>
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
-                        <div style={s.es(col)}>{e.subject}</div>
+                        <div style={s.es(col)}>{e.subject}</div><div style={{fontSize:11,color:"#9caec4",marginTop:4}}>{rangeLabel(e)}</div>
                       </div>
 
                       {!isExpanded && pendingTasksCount > 0 && (
