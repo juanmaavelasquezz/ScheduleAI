@@ -1,7 +1,10 @@
+import {todayCO, agendaReply, holidayOn, addDays} from './academic.js';
+import './redesign.css';
+const storage = {get: async key => {const value=localStorage.getItem(key);return value===null?null:{value}},set: async (key,value) => localStorage.setItem(key,value)};
 import { useState, useEffect, useRef } from "react";
 
 const DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-const PALETTE = ['#818CF8','#34D399','#FB923C','#F472B6','#60A5FA','#A78BFA','#FBBF24','#2DD4BF','#F87171','#4ADE80'];
+const PALETTE = ['#74d5c6','#34D399','#FB923C','#F472B6','#60A5FA','#A78BFA','#FBBF24','#2DD4BF','#F87171','#4ADE80'];
 
 function subjectColor(name = '') {
   let h = 0;
@@ -9,7 +12,7 @@ function subjectColor(name = '') {
   return PALETTE[h];
 }
 
-const DOW = new Date().getDay();
+const DOW = new Date(todayCO()+'T12:00:00Z').getUTCDay();
 const TODAY_IDX = DOW === 0 ? 6 : DOW - 1;
 const SK = 'schedai_v4_sched';
 const TK = 'schedai_v4_tasks';
@@ -18,22 +21,22 @@ const CK = 'schedai_v4_config_days';
 const FONT_URL = "https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap";
 
 const s = {
-  wrap: { display:'flex', flexDirection:'column', height:'100vh', width:'100%', margin:'0 auto', background:'#0B0B18', color:'#EEEEFF', fontFamily:"'DM Sans', sans-serif", overflow:'hidden', position:'relative' },
-  hdr: { flexShrink:0, padding:'16px 18px 0', borderBottom:'1px solid rgba(255,255,255,.07)', background:'#0B0B18' },
-  logo: { fontFamily:"'Syne', sans-serif", fontSize:'19px', fontWeight:800, background:'linear-gradient(120deg,#818CF8 30%,#60A5FA)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', marginBottom:'10px', display:'inline-block' },
+  wrap: { display:'flex', flexDirection:'column', height:'100vh', width:'100%', margin:'0 auto', background:'#111b29', color:'#edf4fc', fontFamily:"'DM Sans', sans-serif", overflow:'hidden', position:'relative' },
+  hdr: { flexShrink:0, padding:'16px 18px 0', borderBottom:'1px solid rgba(255,255,255,.07)', background:'#111b29' },
+  logo: { fontFamily:"-apple-system, BlinkMacSystemFont, sans-serif", fontSize:'19px', fontWeight:800, background:'linear-gradient(120deg,#74d5c6 30%,#60A5FA)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', marginBottom:'10px', display:'inline-block' },
   nav: { display:'flex', gap:0 },
-  nb: (on) => ({ flex:1, padding:'9px 4px', border:'none', background:'transparent', color: on?'#818CF8':'rgba(255,255,255,.38)', fontFamily:"'DM Sans',sans-serif", fontSize:'12.5px', fontWeight: on?600:400, cursor:'pointer', borderBottom: on?'2px solid #818CF8':'2px solid transparent', transition:'all .2s', position:'relative' }),
+  nb: (on) => ({ flex:1, padding:'9px 4px', border:'none', background:'transparent', color: on?'#74d5c6':'rgba(255,255,255,.38)', fontFamily:"'DM Sans',sans-serif", fontSize:'12.5px', fontWeight: on?600:400, cursor:'pointer', borderBottom: on?'2px solid #74d5c6':'2px solid transparent', transition:'all .2s', position:'relative' }),
   badge: { position:'absolute', top:'6px', right:'6px', background:'#EF4444', borderRadius:'99px', padding:'1px 5px', fontSize:'9px', color:'white', fontWeight:700 },
   content: { flex:1, overflow:'hidden', display:'flex', flexDirection:'column' },
   scr: { flex:1, overflowY:'auto', scrollbarWidth:'none' },
 
   // Day tabs
   dtabsWrap: { display:'flex', gap:'7px', padding:'13px 15px 0', overflowX:'auto', scrollbarWidth:'none' },
-  dt: (on, today) => ({ flexShrink:0, padding:'6px 13px', borderRadius:'99px', border: on?'1px solid #4F46E5':today?'1px solid rgba(129,140,248,.45)':'1px solid rgba(255,255,255,.1)', background: on?'#4F46E5':'transparent', color: on?'white':today?'#818CF8':'rgba(255,255,255,.42)', fontFamily:"'DM Sans',sans-serif", fontSize:'12px', cursor:'pointer', transition:'all .2s', fontWeight: on?600:400 }),
+  dt: (on, today) => ({ flexShrink:0, padding:'6px 13px', borderRadius:'99px', border: on?'1px solid #218a80':today?'1px solid rgba(129,140,248,.45)':'1px solid rgba(255,255,255,.1)', background: on?'#218a80':'transparent', color: on?'white':today?'#74d5c6':'rgba(255,255,255,.42)', fontFamily:"'DM Sans',sans-serif", fontSize:'12px', cursor:'pointer', transition:'all .2s', fontWeight: on?600:400 }),
 
   // Schedule
   sv: { padding:'14px 15px' },
-  dh: { fontFamily:"'Syne',sans-serif", fontSize:'18px', fontWeight:800, marginBottom:'13px', display:'flex', alignItems:'baseline', gap:'8px' },
+  dh: { fontFamily:"-apple-system, BlinkMacSystemFont, sans-serif", fontSize:'18px', fontWeight:800, marginBottom:'13px', display:'flex', alignItems:'baseline', gap:'8px' },
   dhSub: { fontSize:'12px', fontWeight:400, color:'rgba(255,255,255,.3)', fontFamily:"'DM Sans',sans-serif" },
   empty: { textAlign:'center', padding:'50px 0', color:'rgba(255,255,255,.22)' },
   emptyIcon: { fontSize:'42px', marginBottom:'8px' },
@@ -53,7 +56,7 @@ const s = {
 
   // Tasks
   tv: { padding:'14px 15px' },
-  th: { fontFamily:"'Syne',sans-serif", fontSize:'18px', fontWeight:800, marginBottom:'13px' },
+  th: { fontFamily:"-apple-system, BlinkMacSystemFont, sans-serif", fontSize:'18px', fontWeight:800, marginBottom:'13px' },
   tc: (cls) => {
     const base = { background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'13px', padding:'12px 14px', marginBottom:'8px' };
     if (cls==='urgent'||cls==='overdue') return {...base, borderColor:'rgba(239,68,68,.28)', background:'rgba(239,68,68,.05)'};
@@ -83,46 +86,47 @@ const s = {
   // Chat
   cv: { flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minHeight:0 },
   mtgl: { display:'flex', margin:'10px 14px 0', background:'rgba(255,255,255,.05)', borderRadius:'9px', padding:'3px', flexShrink:0 },
-  mb: (on) => ({ flex:1, padding:'7px', border:'none', background: on?'#4F46E5':'transparent', color: on?'white':'rgba(255,255,255,.42)', fontSize:'12.5px', cursor:'pointer', borderRadius:'7px', transition:'all .2s', fontFamily:"'DM Sans',sans-serif", fontWeight: on?500:400 }),
+  mb: (on) => ({ flex:1, padding:'7px', border:'none', background: on?'#218a80':'transparent', color: on?'white':'rgba(255,255,255,.42)', fontSize:'12.5px', cursor:'pointer', borderRadius:'7px', transition:'all .2s', fontFamily:"'DM Sans',sans-serif", fontWeight: on?500:400 }),
   cms: { flex:1, overflowY:'auto', padding:'10px 14px', scrollbarWidth:'none', minHeight:0 },
   msgWrap: { marginBottom:'10px' },
   aiB: { background:'rgba(79,70,229,.13)', border:'1px solid rgba(79,70,229,.22)', borderRadius:'13px 13px 13px 4px', padding:'10px 12px', fontSize:'13.5px', lineHeight:1.55, whiteSpace:'pre-wrap', maxWidth:'88%', display:'inline-block' },
   usrW: { display:'flex', justifyContent:'flex-end' },
-  usrB: { background:'#4F46E5', borderRadius:'13px 13px 4px 13px', padding:'9px 12px', fontSize:'13.5px', maxWidth:'82%', lineHeight:1.42, display:'inline-block' },
+  usrB: { background:'#218a80', borderRadius:'13px 13px 4px 13px', padding:'9px 12px', fontSize:'13.5px', maxWidth:'82%', lineHeight:1.42, display:'inline-block' },
   typing: { display:'flex', gap:'4px', alignItems:'center', padding:'10px 12px', background:'rgba(79,70,229,.1)', borderRadius:'13px 13px 13px 4px', width:'54px' },
-  dot: (n) => ({ width:'6px', height:'6px', borderRadius:'50%', background:'#818CF8', animation:`bounce 1.2s ${n*0.2}s infinite` }),
+  dot: (n) => ({ width:'6px', height:'6px', borderRadius:'50%', background:'#74d5c6', animation:`bounce 1.2s ${n*0.2}s infinite` }),
   sug: { display:'flex', gap:'7px', padding:'7px 13px', overflowX:'auto', scrollbarWidth:'none', flexShrink:0 },
-  sg: { flexShrink:0, padding:'6px 11px', border:'1px solid rgba(79,70,229,.33)', borderRadius:'99px', color:'#818CF8', fontSize:'12px', cursor:'pointer', background:'rgba(79,70,229,.08)', whiteSpace:'nowrap', fontFamily:"'DM Sans',sans-serif" },
-  cia: { flexShrink:0, padding:'9px 13px 13px', borderTop:'1px solid rgba(255,255,255,.06)', background:'#0B0B18' },
+  sg: { flexShrink:0, padding:'6px 11px', border:'1px solid rgba(79,70,229,.33)', borderRadius:'99px', color:'#74d5c6', fontSize:'12px', cursor:'pointer', background:'rgba(79,70,229,.08)', whiteSpace:'nowrap', fontFamily:"'DM Sans',sans-serif" },
+  cia: { flexShrink:0, padding:'9px 13px 13px', borderTop:'1px solid rgba(255,255,255,.06)', background:'#111b29' },
   ciar: { display:'flex', gap:'7px', alignItems:'flex-end' },
   cita: { flex:1, background:'rgba(255,255,255,.07)', border:'1px solid rgba(255,255,255,.1)', borderRadius:'11px', padding:'9px 12px', color:'white', fontFamily:"'DM Sans',sans-serif", fontSize:'14px', resize:'none', outline:'none', minHeight:'40px', maxHeight:'90px' },
-  sndbtn: (dis) => ({ width:'40px', height:'40px', borderRadius:'10px', background: dis?'rgba(79,70,229,.4)':'#4F46E5', border:'none', color:'white', fontSize:'20px', cursor: dis?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'background .2s' }),
+  sndbtn: (dis) => ({ width:'40px', height:'40px', borderRadius:'10px', background: dis?'rgba(79,70,229,.4)':'#218a80', border:'none', color:'white', fontSize:'20px', cursor: dis?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'background .2s' }),
 
   modalBackdrop: { position:'absolute', top:0, left:0, right:0, bottom:0, background:'rgba(11,11,24,.85)', backdropFilter:'blur(5px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50, padding:'20px' },
   modalBox: { background:'#15152A', border:'1px solid rgba(255,255,255,.1)', borderRadius:'16px', padding:'20px', width:'100%', maxWidth:'360px', color:'white', display:'flex', flexDirection:'column', gap:'12px', boxSizing:'border-box' },
-  modalTitle: { fontSize:'18px', fontWeight:800, fontFamily:"'Syne',sans-serif", marginBottom:'4px' },
+  modalTitle: { fontSize:'18px', fontWeight:800, fontFamily:"-apple-system, BlinkMacSystemFont, sans-serif", marginBottom:'4px' },
   input: { background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.1)', borderRadius:'8px', padding:'10px 12px', color:'white', fontSize:'14px', fontFamily:"'DM Sans',sans-serif", width:'100%', boxSizing:'border-box', outline:'none' },
   select: { background:'#1E1E36', border:'1px solid rgba(255,255,255,.1)', borderRadius:'8px', padding:'10px 12px', color:'white', fontSize:'14px', fontFamily:"'DM Sans',sans-serif", width:'100%', boxSizing:'border-box', outline:'none' },
   btnRow: { display:'flex', gap:'10px', marginTop:'8px' },
-  btnPri: { flex:1, padding:'10px', background:'#4F46E5', borderRadius:'8px', border:'none', color:'white', fontWeight:600, cursor:'pointer' },
+  btnPri: { flex:1, padding:'10px', background:'#218a80', borderRadius:'8px', border:'none', color:'white', fontWeight:600, cursor:'pointer' },
   btnSec: { flex:1, padding:'10px', background:'transparent', border:'1px solid rgba(255,255,255,.2)', borderRadius:'8px', color:'white', fontWeight:600, cursor:'pointer' },
-  addBtn: { background:'rgba(79,70,229,.15)', border:'1px dashed rgba(79,70,229,.4)', borderRadius:'8px', padding:'6px 12px', color:'#818CF8', fontSize:'13px', cursor:'pointer', fontFamily:"'DM Sans',sans-serif", fontWeight:600 },
+  addBtn: { background:'rgba(79,70,229,.15)', border:'1px dashed rgba(79,70,229,.4)', borderRadius:'8px', padding:'6px 12px', color:'#74d5c6', fontSize:'13px', cursor:'pointer', fontFamily:"'DM Sans',sans-serif", fontWeight:600 },
   toggleBtn: { display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.1)', borderRadius:'12px', padding:'12px 16px', cursor:'pointer', width:'100%', boxSizing:'border-box', fontFamily:"'DM Sans',sans-serif", fontSize:'14px', color:'white', transition:'all .2s' },
-  toggleTrack: (on) => ({ width:'42px', height:'24px', borderRadius:'12px', background: on ? '#4F46E5' : 'rgba(255,255,255,.2)', position:'relative', transition:'background .3s' }),
+  toggleTrack: (on) => ({ width:'42px', height:'24px', borderRadius:'12px', background: on ? '#218a80' : 'rgba(255,255,255,.2)', position:'relative', transition:'background .3s' }),
   toggleNub: (on) => ({ width:'18px', height:'18px', borderRadius:'50%', background:'white', position:'absolute', top:'3px', left: on ? '21px' : '3px', transition:'left .3s', boxShadow:'0 1px 3px rgba(0,0,0,.3)' }),
 };
 
 export default function App() {
+  const [pendingImport, setPendingImport] = useState(null);
   const [view, setView] = useState('home');
   const [homeMonth, setHomeMonth] = useState(new Date());
-  const [homeSelDate, setHomeSelDate] = useState(new Date().toISOString().split('T')[0]);
+  const [homeSelDate, setHomeSelDate] = useState(todayCO());
   const [day, setDay] = useState(TODAY_IDX);
   const [sched, setSched] = useState([]);
   const [deletedSched, setDeletedSched] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [msgs, setMsgs] = useState([{
     r:'ai',
-    t:'¡Hola! 👋 Soy tu asistente de horarios.\n\nTengo dos modos:\n\n📅 Horario — Dime tus clases y te armo el horario:\n"Matemáticas lunes y miércoles de 8 a 10am, Física jueves 2-4pm"\n\n📝 Tareas — Dime tus pendientes y gestiono recordatorios:\n"Entregar ensayo de historia el viernes, parcial de cálculo el martes"\n\nLos recordatorios de WhatsApp se activan 3 días antes automáticamente. ¿Empezamos?'
+    t:'¡Hola! 👋 Soy tu asistente de horarios.\n\nTengo dos modos:\n\n📅 Horario — Dime tus clases y te armo el horario:\n"Matemáticas lunes y miércoles de 8 a 10am, Física jueves 2-4pm"\n\n📝 Tareas — Dime tus pendientes y gestiono recordatorios:\n"Entregar ensayo de historia el viernes, parcial de cálculo el martes"\n\nConsulta tu agenda o importa tus clases. WhatsApp permite compartir recordatorios manualmente. ¿Empezamos?'
   }]);
   const [inp, setInp] = useState('');
   const [mode, setMode] = useState('schedule');
@@ -148,14 +152,14 @@ export default function App() {
   const [isTaskRepeated, setIsTaskRepeated] = useState(false);
   const [extraTaskDays, setExtraTaskDays] = useState([]);
   const [expandedTaskId, setExpandedTaskId] = useState(null);
-  const [mTask, setMTask] = useState({ title:'', subject:'', dueDate: new Date().toISOString().split('T')[0], dueTime: '23:59', remindFreq: 'auto' });
+  const [mTask, setMTask] = useState({ title:'', subject:'', dueDate: todayCO(), dueTime: '23:59', remindFreq: 'auto' });
   const [showCustomSubject, setShowCustomSubject] = useState(false);
   const [calTaskId, setCalTaskId] = useState(null);
   const [calMonth, setCalMonth] = useState(new Date());
   const [calTooltipId, setCalTooltipId] = useState(null);
   
   const AI_HINTS = [
-    "Pregúntame cualquier cosa...",
+    "Consulta tus clases y entregas",
     "Agrega automáticamente tu horario...",
     "Anota tu próxima tarea aquí...",
     "¿Qué clases tengo el lunes?",
@@ -183,11 +187,11 @@ export default function App() {
   useEffect(() => { endRef.current?.scrollIntoView({behavior:'smooth'}); }, [msgs]);
 
   async function load() {
-    try { const r = await window.storage.get(SK); if(r) setSched(JSON.parse(r.value)); } catch(e){}
-    try { const r = await window.storage.get('sched_del'); if(r) setDeletedSched(JSON.parse(r.value)); } catch(e){}
-    try { const r = await window.storage.get(TK); if(r) setTasks(JSON.parse(r.value)); } catch(e){}
+    try { const r = await storage.get(SK); if(r) setSched(JSON.parse(r.value)); } catch(e){}
+    try { const r = await storage.get('sched_del'); if(r) setDeletedSched(JSON.parse(r.value)); } catch(e){}
+    try { const r = await storage.get(TK); if(r) setTasks(JSON.parse(r.value)); } catch(e){}
     try { 
-      const r = await window.storage.get(CK); 
+      const r = await storage.get(CK); 
       if(r) {
         const val = JSON.parse(r.value);
         if(Array.isArray(val)) setShowWeekends(val.includes(5));
@@ -196,9 +200,9 @@ export default function App() {
     } catch(e){}
   }
 
-  async function putSched(arr) { setSched(arr); try { await window.storage.set(SK, JSON.stringify(arr)); } catch(e){} }
-  async function putDeletedSched(arr) { setDeletedSched(arr); try { await window.storage.set('sched_del', JSON.stringify(arr)); } catch(e){} }
-  async function putTasks(arr) { setTasks(arr); try { await window.storage.set(TK, JSON.stringify(arr)); } catch(e){} }
+  async function putSched(arr) { setSched(arr); try { await storage.set(SK, JSON.stringify(arr)); } catch(e){} }
+  async function putDeletedSched(arr) { setDeletedSched(arr); try { await storage.set('sched_del', JSON.stringify(arr)); } catch(e){} }
+  async function putTasks(arr) { setTasks(arr); try { await storage.set(TK, JSON.stringify(arr)); } catch(e){} }
 
   function daysLeft(d) {
     const t = new Date(); t.setHours(0,0,0,0);
@@ -254,28 +258,20 @@ export default function App() {
   async function send() {
     if (!inp.trim() || busy) return;
     const txt = inp.trim();
+    const localReply = agendaReply(txt, sched, tasks);
+    if(localReply){setMsgs(p=>[...p,{r:'user',t:txt},{r:'ai',t:localReply}]);setInp('');return;}
     setInp('');
     if (taRef.current) taRef.current.style.height = '36px';
     setMsgs(p=>[...p,{r:'user',t:txt}]);
     setBusy(true);
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayCO();
 
-    const ctxS = sched.map(x=>`${x.dayIndex}:${x.subject}:${x.startTime||''}`).join(',');
-    const ctxT = tasks.filter(x=>!x.completed).map(x=>`${x.title}:${x.dueDate}`).join(',');
-
-    const sys = `Eres asis. acad. Hoy:${today}.
-Ctx (0=Lun-6=Dom): Horario[${ctxS}] Tareas[${ctxT}].
-Si preguntan info, responde breve y amable en "reply".
-Si piden agregar info, detecta HORARIOS y/o TAREAS.
-Responde SOLO con JSON válido:
-{"entries":[{"dayIndex":0,"subject":"nombre","startTime":"08:00","endTime":"10:00","location":"","professor":""}],"tasks":[{"title":"desc","subject":"mat","dueDate":"YYYY-MM-DD"}],"reply":"mensaje breve"}
-Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
 
     try {
       const res = await fetch('/api/chat', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ system: sys, message: txt })
+        body:JSON.stringify({ message: txt, today: todayCO() })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -285,25 +281,11 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
       const ts = Date.now();
       let confirmParts = [];
 
-      if (parsed.entries?.length) {
-        const add = parsed.entries.map((e,i)=>({...e, id:`e${ts}${i}`}));
-        await putSched([...sched, ...add]);
-        confirmParts.push('📅 Horario agregado');
-      }
-      if (parsed.tasks?.length) {
-        const add = parsed.tasks.map((t,i)=>({...t, id:`t${ts}${i}`, completed:false}));
-        await putTasks([...tasks, ...add]);
-        confirmParts.push('📝 Tareas agregadas');
-      }
-
-      if (confirmParts.length > 0) {
-        setMsgs(p=>[...p,{r:'ai',t:(parsed.reply||confirmParts.join(' y ')+'.')+'\n\n✅ '+confirmParts.join(' • ')+' — revisa las pestañas para ver todo.'}]);
-      } else {
-        setMsgs(p=>[...p,{r:'ai',t:parsed.reply||'No pude detectar horarios ni tareas claras. Intenta con algo como:\n"Matemáticas lunes y miércoles 8-10am" o "Entregar ensayo el viernes"'}]);
-      }
+      if(parsed.entries?.length || parsed.tasks?.length) setPendingImport(parsed);
+      setMsgs(p=>[...p,{r:'ai',t:parsed.reply || 'Revisa los datos extraídos antes de guardarlos.'}]);
     } catch(e) {
       console.error('API error:', e);
-      setMsgs(p=>[...p,{r:'ai',t:'Ocurrió un error procesando tu solicitud. Por favor intenta de nuevo.'}]);
+      setMsgs(p=>[...p,{r:'ai',t:e.message || 'No se pudo procesar la solicitud.'}]);
     }
     setBusy(false);
   }
@@ -318,28 +300,19 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
     if (taRef.current) taRef.current.style.height = '40px';
     setMsgs(p=>[...p,{r:'user',t: file ? `📎 ${file.name}\n${txt}` : txt}]);
     setBusy(true);
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayCO();
 
-    const ctxS = sched.map(x=>`${x.dayIndex}:${x.subject}:${x.startTime||''}`).join(',');
-    const ctxT = tasks.filter(x=>!x.completed).map(x=>`${x.title}:${x.dueDate}`).join(',');
-
-    const sys = `Eres parser acad. Hoy:${today}.
-Ctx (0=Lun-6=Dom): Horario[${ctxS}] Tareas[${ctxT}].
-Extrae HORARIOS y/o TAREAS del archivo o responde preguntas en "reply" con base en tu contexto o archivo.
-Responde SOLO JSON válido:
-{"entries":[{"dayIndex":0,"subject":"nombre","startTime":"08:00","endTime":"10:00","location":"","professor":""}],"tasks":[{"title":"desc","subject":"mat","dueDate":"YYYY-MM-DD"}],"reply":"mensaje breve"}
-Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
 
     try {
       const formData = new FormData();
-      formData.append('system', sys);
+      formData.append('today', todayCO());
       formData.append('message', txt);
       if (file) formData.append('file', file);
 
       const endpoint = file ? '/api/chat-file' : '/api/chat';
       const fetchOpts = file
         ? { method:'POST', body: formData }
-        : { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ system: sys, message: txt }) };
+        : { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ message: txt, today: todayCO() }) };
 
       const res = await fetch(endpoint, fetchOpts);
       const data = await res.json();
@@ -350,22 +323,11 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
       const ts = Date.now();
       let confirmParts = [];
 
-      if (parsed.entries?.length) {
-        const add = parsed.entries.map((e,i)=>({...e, id:`e${ts}${i}`}));
-        await putSched([...sched, ...add]);
-        confirmParts.push('📅 Horario');
-      }
-      if (parsed.tasks?.length) {
-        const add = parsed.tasks.map((t,i)=>({...t, id:`t${ts}${i}`, completed:false}));
-        await putTasks([...tasks, ...add]);
-        confirmParts.push('📝 Tareas');
-      }
-
-      const defaultReply = confirmParts.length ? confirmParts.join(' y ') + ' agregados.' : 'Documento procesado.';
-      setMsgs(p=>[...p,{r:'ai',t:parsed.reply || defaultReply}]);
+      if(parsed.entries?.length || parsed.tasks?.length) setPendingImport(parsed);
+      setMsgs(p=>[...p,{r:'ai',t:parsed.reply || 'Revisa los datos extraídos antes de guardarlos.'}]);
     } catch(e) {
       console.error('File upload error:', e);
-      setMsgs(p=>[...p,{r:'ai',t:'Ocurrió un error procesando el archivo. Verifica que sea un PDF o Word válido.'}]);
+      setMsgs(p=>[...p,{r:'ai',t:e.message || 'No se pudo leer el documento.'}]);
     }
     setBusy(false);
   }
@@ -426,7 +388,7 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
     setEditTaskId(null);
     setIsTaskRepeated(false);
     setExtraTaskDays([]);
-    setMTask({ title:'', subject:'', dueDate: new Date().toISOString().split('T')[0], dueTime:'23:59', remindFreq:'auto' });
+    setMTask({ title:'', subject:'', dueDate: todayCO(), dueTime:'23:59', remindFreq:'auto' });
   };
 
   const handleAddExtraTask = () => {
@@ -460,11 +422,16 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
     const next = !showWeekends;
     setShowWeekends(next);
     if (!next && day > 4) setDay(0);
-    window.storage.set(CK, JSON.stringify(next)).catch(()=>{});
+    storage.set(CK, JSON.stringify(next)).catch(()=>{});
   };
 
   return (
     <div className="app-shell" style={s.wrap}>
+      {pendingImport && <div className="review" role="dialog" aria-modal="true" aria-label="Revisar importación"><article><h2>Revisa tu nuevo plan</h2><p>Comprueba días y horas antes de guardar. Puedes editar cada elemento después.</p><pre>{(pendingImport.entries||[]).map(e=>`${DAYS[e.dayIndex]} · ${e.startTime}–${e.endTime} · ${e.subject}`).concat((pendingImport.tasks||[]).map(t=>`${t.dueDate} · ${t.title}`)).join('\n')}</pre><button onClick={()=>setPendingImport(null)}>Cancelar</button><button onClick={()=>{
+       const stamp=Date.now();const es=(pendingImport.entries||[]).filter(e=>!sched.some(x=>x.dayIndex===e.dayIndex&&x.startTime===e.startTime&&x.endTime===e.endTime&&x.subject.toLowerCase()===e.subject.toLowerCase()));
+       const ts=(pendingImport.tasks||[]).filter(t=>!tasks.some(x=>x.title.toLowerCase()===t.title.toLowerCase()&&x.dueDate===t.dueDate));
+       putSched([...sched,...es.map((e,i)=>({...e,id:`ai-e-${stamp}-${i}`}))]);putTasks([...tasks,...ts.map((t,i)=>({...t,id:`ai-t-${stamp}-${i}`,completed:false}))]);setPendingImport(null);
+      }}>Guardar en mi agenda</button></article></div>}
       {view !== 'chatFullscreen' && (
         <div style={s.hdr}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'10px'}}>
@@ -486,9 +453,10 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
         {/* ── Home View ── */}
         {view==='home' && (
           <div style={s.scr}>
+            <div className='welcome'><small>TU ESPACIO DE ESTUDIO</small><h1>Un día con propósito.</h1><p>Clases, entregas y tiempo para avanzar. Todo en un lugar.</p></div>
             <div style={{padding:'20px 15px'}}>
               <button style={{width:'100%', marginBottom:'25px', padding:'16px 20px', background:'linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%)', border:'1px solid rgba(139, 92, 246, 0.3)', borderRadius:'20px', display:'flex', alignItems:'center', gap:'14px', cursor:'pointer', transition:'all 0.3s ease', boxShadow:'0 8px 32px rgba(79,70,229,0.15), inset 0 1px 0 rgba(255,255,255,0.1)', backdropFilter:'blur(10px)'}} onClick={() => setView('chatFullscreen')} onMouseEnter={e => e.currentTarget.style.transform='translateY(-2px)'} onMouseLeave={e => e.currentTarget.style.transform='translateY(0)'}>
-                <div style={{fontSize:'22px', background:'linear-gradient(135deg, #818CF8, #C084FC)', WebkitBackgroundClip:'text', color:'transparent', filter:'drop-shadow(0 2px 4px rgba(139,92,246,0.3))'}}>✨</div>
+                <div style={{fontSize:'22px', background:'linear-gradient(135deg, #74d5c6, #C084FC)', WebkitBackgroundClip:'text', color:'transparent', filter:'drop-shadow(0 2px 4px rgba(139,92,246,0.3))'}}>✨</div>
                 <div style={{display:'flex', flexDirection:'column', flex:1, textAlign:'left'}}>
                   <span style={{fontSize:'14px', fontWeight:700, background:'linear-gradient(90deg, #E0E7FF, #C084FC)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', letterSpacing:'0.3px'}}>Asistente Schedule AI</span>
                   <span key={aiHintIdx} style={{fontSize:'12px', color:'rgba(255,255,255,.5)', fontWeight:500, marginTop:'3px', animation:'fadeText 0.5s ease backwards'}}>{AI_HINTS[aiHintIdx]}</span>
@@ -503,11 +471,11 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
               {/* Calendario Global */}
               <div style={{background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.07)', borderRadius:'16px', padding:'18px 20px', color:'white', display:'flex', flexDirection:'column', gap:'16px', marginBottom:'20px'}}>
                 <div style={{textAlign:'center', fontWeight:700, fontSize:'16px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                  <button style={{background:'rgba(255,255,255,.05)', borderRadius:'8px', border:'none', color:'#818CF8', cursor:'pointer', fontSize:'16px', width:'30px', height:'30px'}} onClick={()=>{
+                  <button style={{background:'rgba(255,255,255,.05)', borderRadius:'8px', border:'none', color:'#74d5c6', cursor:'pointer', fontSize:'16px', width:'30px', height:'30px'}} onClick={()=>{
                     const nm = new Date(homeMonth); nm.setMonth(nm.getMonth()-1); setHomeMonth(nm);
                   }}>‹</button>
                   {homeMonth.toLocaleDateString('es-CO',{month:'long', year:'numeric'}).replace(/^\w/, c=>c.toUpperCase())}
-                  <button style={{background:'rgba(255,255,255,.05)', borderRadius:'8px', border:'none', color:'#818CF8', cursor:'pointer', fontSize:'16px', width:'30px', height:'30px'}} onClick={()=>{
+                  <button style={{background:'rgba(255,255,255,.05)', borderRadius:'8px', border:'none', color:'#74d5c6', cursor:'pointer', fontSize:'16px', width:'30px', height:'30px'}} onClick={()=>{
                     const nm = new Date(homeMonth); nm.setMonth(nm.getMonth()+1); setHomeMonth(nm);
                   }}>›</button>
                 </div>
@@ -545,21 +513,21 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
                        });
                        
                        const isSelected = homeSelDate === dStr;
-                       const isToday = new Date().toISOString().split('T')[0] === dStr;
+                       const isToday = todayCO() === dStr;
                        
-                       const bg = isSelected ? '#4F46E5' : isToday ? 'rgba(255,255,255,.1)' : 'transparent';
+                       const bg = isSelected ? '#218a80' : isToday ? 'rgba(255,255,255,.1)' : 'transparent';
                        
                        return (
                          <div key={day} style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
                            <button 
                              style={{width:'34px', height:'34px', borderRadius:'50%', background: bg, border:'none', color: isSelected || isToday ? 'white' : 'rgba(255,255,255,.7)', fontSize:'14px', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', padding:0, transition:'all .2s'}}
-                             onClick={() => setHomeSelDate(dStr)}
+                             title={holidayOn(dStr) || dStr} onClick={() => setHomeSelDate(dStr)}
                            >
                              {day}
                            </button>
                            <div style={{display:'flex', gap:'2px', marginTop:'3px', height:'4px'}}>
                              {hasClass && <div style={{width:'4px', height:'4px', borderRadius:'50%', background:'#34D399'}}/>}
-                             {hasTask && <div style={{width:'4px', height:'4px', borderRadius:'50%', background:'#F87171'}}/>}
+                             {holidayOn(dStr) && <div style={{width:5,height:5,borderRadius:'50%',background:'#FBBF24'}}/>}{hasTask && <div style={{width:'4px', height:'4px', borderRadius:'50%', background:'#F87171'}}/>}
                            </div>
                          </div>
                        );
@@ -573,9 +541,10 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
                 </div>
               </div>
               
+              {holidayOn(homeSelDate) && <div className='holiday-note'>🇨🇴 {holidayOn(homeSelDate)} · Festivo nacional. Confirma con tu institución si hay clases.</div>}
               {/* Vista Detallada del Día */}
               <div style={{background:'rgba(255,255,255,.02)', borderRadius:'16px', padding:'18px 20px'}}>
-                <div style={{fontSize:'16px', fontWeight:700, fontFamily:"'Syne',sans-serif", marginBottom:'15px', color:'white'}}>
+                <div style={{fontSize:'16px', fontWeight:700, fontFamily:"-apple-system, BlinkMacSystemFont, sans-serif", marginBottom:'15px', color:'white'}}>
                   Agenda del {new Date(homeSelDate+'T12:00:00').toLocaleDateString('es-CO',{day:'numeric',month:'long'})}
                 </div>
                 
@@ -652,7 +621,7 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
                 );
               })}
             </div>
-            <div style={s.sv}>
+            <div style={s.sv}>{(()=>{const date=addDays(todayCO(),day-TODAY_IDX);const h=holidayOn(date);return h?<div className='holiday-note'>🇨🇴 {date} · {h}. Confirma si tu institución tiene clase.</div>:null})()}
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'13px'}}>
                 <div style={{...s.dh, marginBottom:0}}>
                   {DAYS[day]}
@@ -710,7 +679,7 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
                               setIsTaskRepeated(false);
                               setExtraTaskDays([]);
                               setShowCustomSubject(false);
-                              setMTask({ title:'', subject:e.subject, dueDate: new Date().toISOString().split('T')[0], dueTime:'23:59', remindFreq:'auto' });
+                              setMTask({ title:'', subject:e.subject, dueDate: todayCO(), dueTime:'23:59', remindFreq:'auto' });
                               setShowTaskModal(true);
                             }}>
                               📝 Añadir Tarea
@@ -735,7 +704,7 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
                   </div>
                 );
               })}
-              <button style={{...s.clrBtn, background:'rgba(79,70,229,.15)', border:'1px dashed rgba(79,70,229,.4)', color:'#818CF8', marginTop:'15px', fontWeight:600}} onClick={()=>{
+              <button style={{...s.clrBtn, background:'rgba(79,70,229,.15)', border:'1px dashed rgba(79,70,229,.4)', color:'#74d5c6', marginTop:'15px', fontWeight:600}} onClick={()=>{
                 setEditSchedId(null);
                 setIsRepeated(false);
                 setExtraDays([]);
@@ -759,7 +728,7 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
                   setIsTaskRepeated(false);
                   setExtraTaskDays([]);
                   setShowCustomSubject(false);
-                  setMTask({ title:'', subject:'', dueDate: new Date().toISOString().split('T')[0], dueTime: '23:59', remindFreq: 'auto' });
+                  setMTask({ title:'', subject:'', dueDate: todayCO(), dueTime: '23:59', remindFreq: 'auto' });
                   setShowTaskModal(true);
                 }}>+ Añadir tarea</button>
               </div>
@@ -915,7 +884,7 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
               )}
               <input ref={fileRef} type="file" accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword" style={{display:'none'}} onChange={e => { if(e.target.files[0]) setAttachedFile(e.target.files[0]); e.target.value=''; }} />
               <div style={{display:'flex', gap:'6px', alignItems:'flex-end', paddingBottom:'4px'}}>
-                <button style={{width:'36px', height:'36px', borderRadius:'9px', background: attachedFile ? 'rgba(79,70,229,.3)' : 'rgba(255,255,255,.07)', border:'1px solid rgba(255,255,255,.08)', color: attachedFile ? '#818CF8' : 'rgba(255,255,255,.45)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .2s'}} onClick={()=>fileRef.current?.click()} title="Adjuntar PDF o Word">
+                <button style={{width:'36px', height:'36px', borderRadius:'9px', background: attachedFile ? 'rgba(79,70,229,.3)' : 'rgba(255,255,255,.07)', border:'1px solid rgba(255,255,255,.08)', color: attachedFile ? '#74d5c6' : 'rgba(255,255,255,.45)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .2s'}} onClick={()=>fileRef.current?.click()} title="Adjuntar PDF o Word">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 </button>
                 <textarea
@@ -1036,7 +1005,7 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
                   <div style={{display:'flex', flexDirection:'column', gap:'5px'}}>
                     <input style={s.input} placeholder="Materia o Proyecto Libre..." value={mTask.subject} onChange={e=>setMTask({...mTask,subject:e.target.value})} />
                     {uniqueSubjects.length > 0 && (
-                      <button style={{background:'transparent', border:'none', color:'#818CF8', fontSize:'11.5px', textAlign:'left', cursor:'pointer', padding:'2px'}} onClick={() => { setShowCustomSubject(false); setMTask({...mTask, subject:''}) }}>
+                      <button style={{background:'transparent', border:'none', color:'#74d5c6', fontSize:'11.5px', textAlign:'left', cursor:'pointer', padding:'2px'}} onClick={() => { setShowCustomSubject(false); setMTask({...mTask, subject:''}) }}>
                         ← Volver a elegir de mis Clases
                       </button>
                     )}
@@ -1096,11 +1065,11 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
           <div style={{background:'rgba(21,21,42,.95)', border:'1px solid rgba(255,255,255,.1)', borderRadius:'16px', padding:'18px 20px', width:'290px', color:'white', display:'flex', flexDirection:'column', gap:'16px', backdropFilter:'blur(10px)', position:'relative', animation:'floatUp 0.3s ease-out forwards'}} onClick={e=>e.stopPropagation()}>
             <button style={{...s.xbtn, position:'absolute', top:'14px', right:'14px'}} onClick={()=>setCalTaskId(null)}>×</button>
             <div style={{textAlign:'center', fontWeight:700, fontSize:'15px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-              <button style={{background:'rgba(255,255,255,.05)', borderRadius:'8px', border:'none', color:'#818CF8', cursor:'pointer', fontSize:'16px', width:'28px', height:'28px', display:'flex', alignItems:'center', justifyContent:'center'}} onClick={()=>{
+              <button style={{background:'rgba(255,255,255,.05)', borderRadius:'8px', border:'none', color:'#74d5c6', cursor:'pointer', fontSize:'16px', width:'28px', height:'28px', display:'flex', alignItems:'center', justifyContent:'center'}} onClick={()=>{
                 const nm = new Date(calMonth); nm.setMonth(nm.getMonth()-1); setCalMonth(nm); setCalTooltipId(null);
               }}>‹</button>
               {calMonth.toLocaleDateString('es-CO',{month:'long', year:'numeric'}).replace(/^\w/, c=>c.toUpperCase())}
-              <button style={{background:'rgba(255,255,255,.05)', borderRadius:'8px', border:'none', color:'#818CF8', cursor:'pointer', fontSize:'16px', width:'28px', height:'28px', display:'flex', alignItems:'center', justifyContent:'center'}} onClick={()=>{
+              <button style={{background:'rgba(255,255,255,.05)', borderRadius:'8px', border:'none', color:'#74d5c6', cursor:'pointer', fontSize:'16px', width:'28px', height:'28px', display:'flex', alignItems:'center', justifyContent:'center'}} onClick={()=>{
                 const nm = new Date(calMonth); nm.setMonth(nm.getMonth()+1); setCalMonth(nm); setCalTooltipId(null);
               }}>›</button>
             </div>
@@ -1125,12 +1094,12 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
                    const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                    const evs = allDates.filter(ad => ad.dueDate === dStr);
                    const hasEv = evs.length > 0;
-                   const isToday = new Date().toISOString().split('T')[0] === dStr;
+                   const isToday = todayCO() === dStr;
                    
                    return (
                      <div key={day} style={{position:'relative', display:'flex', flexDirection:'column', alignItems:'center'}}>
                        <button 
-                         style={{width:'30px', height:'30px', borderRadius:'50%', background: isToday ? 'rgba(255,255,255,.1)' : 'transparent', border: hasEv ? '1px solid #4F46E5' : '1px solid transparent', color: hasEv ? 'white' : 'rgba(255,255,255,.5)', fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'center', cursor: hasEv ? 'pointer':'default', padding:0, transition:'all .2s'}}
+                         style={{width:'30px', height:'30px', borderRadius:'50%', background: isToday ? 'rgba(255,255,255,.1)' : 'transparent', border: hasEv ? '1px solid #218a80' : '1px solid transparent', color: hasEv ? 'white' : 'rgba(255,255,255,.5)', fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'center', cursor: hasEv ? 'pointer':'default', padding:0, transition:'all .2s'}}
                          onClick={(e) => {
                            if(hasEv) {
                              e.stopPropagation();
@@ -1140,13 +1109,13 @@ Reglas: Fechas relativas a ${today}. Sé muy breve en 'reply'.`;
                        >
                          {day}
                        </button>
-                       {hasEv && <div style={{width:'4px', height:'4px', borderRadius:'50%', background:'#818CF8', marginTop:'3px'}}/>}
+                       {hasEv && <div style={{width:'4px', height:'4px', borderRadius:'50%', background:'#74d5c6', marginTop:'3px'}}/>}
                        
                        {/* Animated Tooltip */}
                        {calTooltipId === dStr && (
-                         <div style={{position:'absolute', bottom:'100%', left:'50%', background:'#4F46E5', color:'white', padding:'5px 10px', borderRadius:'8px', fontSize:'11.5px', fontWeight:600, whiteSpace:'nowrap', boxShadow:'0 4px 15px rgba(0,0,0,.4)', zIndex:60, animation:'pop 0.2s ease-out forwards'}}>
+                         <div style={{position:'absolute', bottom:'100%', left:'50%', background:'#218a80', color:'white', padding:'5px 10px', borderRadius:'8px', fontSize:'11.5px', fontWeight:600, whiteSpace:'nowrap', boxShadow:'0 4px 15px rgba(0,0,0,.4)', zIndex:60, animation:'pop 0.2s ease-out forwards'}}>
                            {evs.map(ev => ev.dueTime ? `⏰ ${ev.dueTime}` : '📌 Todo el día').join(' / ')}
-                           <div style={{position:'absolute', top:'100%', left:'50%', transform:'translateX(-50%)', borderLeft:'6px solid transparent', borderRight:'6px solid transparent', borderTop:'6px solid #4F46E5'}}/>
+                           <div style={{position:'absolute', top:'100%', left:'50%', transform:'translateX(-50%)', borderLeft:'6px solid transparent', borderRight:'6px solid transparent', borderTop:'6px solid #218a80'}}/>
                          </div>
                        )}
                      </div>
